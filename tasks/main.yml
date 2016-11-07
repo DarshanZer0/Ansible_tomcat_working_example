@@ -20,15 +20,14 @@
     - java
 
 - name: Extract java 7
-  shell: tar xzf /tmp/{{ jdk_or_jre }}_{{ java_version }}.{{ java_ext }}
-    chdir=/opt
+  shell: "tar xzf /tmp/{{ jdk_or_jre }}_{{ java_version }}.{{ java_ext }} -C /opt"
   when: jdk_downloaded|changed and java_ext == "tar.gz"
   tags:
     - java
 
 - name: Update Java permissions
   file: path=/opt/{{ jdk_or_jre }}1.{{ java_version|replace('u','.0_') }}
-    owner=root group=root recurse=yes mode=0755
+    owner=root group=root recurse=yes mode=0755 state=directory
   tags:
     - java
 
@@ -101,13 +100,13 @@
 
 # tasks file for tomcat
 
-- name: Stop tomcat just in case
-  shell: 'pkill -f tomcat'
-  ignore_errors: True
-  tags:
-    - tomcat
-  when:
-- service: name=tomcat state=stopped
+#- name: Stop tomcat just in case
+ # shell: 'pkill -f tomcat'
+ # ignore_errors: True
+ # tags:
+ #   - tomcat
+ # when: 
+#- service: name=tomcat state=stopped
 
 - name: Create tomcat group
   group: name=tomcat state=present
@@ -175,5 +174,22 @@
 
 - name: wait for tomcat to start
   wait_for: port={{ http_port }} timeout=60
+  tags:
+    - tomcat
+
+#Edited by DC from this point
+
+- name: stop tomcat before adding a war file to webapps
+  shell: /etc/init.d/tomcat stop
+  tags:
+    - tomcat
+
+- name: copy war file to webapps directory
+  copy: src=/home/devops_admin/playbooks/DC_Playbooks/tomcat_2/simple-web-app-1.0.0-BUILD-SNAPSHOT.war dest=/opt/apache-tomcat-7.0.59/webapps
+  tags:
+    - tomcat
+
+- name: start tomcat after adding war file
+  shell: /etc/init.d/tomcat start
   tags:
     - tomcat
